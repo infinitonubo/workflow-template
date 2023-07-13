@@ -1,0 +1,126 @@
+name: Publish Service
+
+on:
+    release:
+        types: [ published ]
+    workflow_dispatch:
+        inputs:
+            releaseType:
+                description: 'Where to release (dev, staging or prod)?'
+                required: true
+                default: dev
+
+env:
+    AWS_REGION: "us-east-1"
+    DEV_STAGE: "development"
+    STAGING_STAGE: "staging"
+    PROD_STAGE: "production"
+
+permissions:
+    id-token: write
+    contents: read
+
+jobs:
+    development:
+        name: Deploy to Development
+        runs-on: ubuntu-latest
+        environment:
+            name: development
+            url: https://dev-api.domain.com
+        strategy:
+            matrix:
+                node-version: [16.x]
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        - name: Set up Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: ${{ matrix.node-version }}
+
+        - name: Install dependencies
+          run: npm install ci
+
+        - name: Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v2
+          with:
+            role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+            role-session-name: ${{ secrets.SESSION_NAME }}
+            mask-aws-account-id: false
+            aws-region: ${{ env.AWS_REGION}}
+
+        - name: Deploy
+          run: | #<block of commands>
+
+
+    staging:
+
+        if: github.event.inputs.releaseType == 'staging'
+        name: Deploy to Staging
+        runs-on: ubuntu-latest
+        environment:
+            name: staging
+            url: https://staging-api.domain.com
+        needs: [ development ]
+        strategy:
+            matrix:
+                node-version: [16.x]
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        - name: Set up Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: ${{ matrix.node-version }}
+
+        - name: Install dependencies
+          run: npm install ci
+
+        - name: Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v2
+          with:
+            role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+            role-session-name: ${{ secrets.SESSION_NAME }}
+            mask-aws-account-id: false
+            aws-region: ${{ env.AWS_REGION}}
+
+        - name: Deploy
+          run: | #<block of commands>
+
+    production:
+
+        if: github.event.inputs.releaseType == 'prod'
+        name: Deploy to production
+
+        runs-on: ubuntu-latest
+        environment:
+            name: production
+            url: https://api.domain.com
+        needs: [ staging ]
+        strategy:
+            matrix:
+                node-version: [16.x]
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        - name: Set up Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: ${{ matrix.node-version }}
+
+        - name: Install dependencies
+          run: npm install ci
+
+        - name: Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v2
+          with:
+            role-to-assume: ${{ secrets.ASSUME_ROLE_ARN }}
+            role-session-name: ${{ secrets.SESSION_NAME }}
+            mask-aws-account-id: false
+            aws-region: ${{ env.AWS_REGION}}
+
+        - name: Deploy
+          run: | #<block of commands>
